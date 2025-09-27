@@ -1,0 +1,158 @@
+---
+title: Assignment 04
+author:
+  - name: Norah Jones
+    affiliations:
+      - id: bu
+        name: Boston University
+        city: Boston
+        state: MA
+number-sections: true
+date: '2024-11-21'
+date-modified: today
+date-format: long
+format:
+  html:
+    theme: cerulean
+    toc: true
+    toc-depth: 2
+
+execute:
+  echo: false
+  eval: false
+  freeze: auto
+---
+
+```{python}
+# Set Up
+from pyspark.sql import SparkSession
+import pandas as pd
+import plotly.express as px
+import plotly.io as pio
+import numpy as np
+from pathlib import Path
+
+# Use a renderer that works during Quarto render
+pio.renderers.default = "plotly_mimetype"
+
+# Start a Spark session
+spark = SparkSession.builder.appName("LightcastData").getOrCreate()
+
+# Path relative to this document's working directory
+data_path = Path("data") / "lightcast_job_postings.csv"   
+
+# Load the CSV file into a Spark DataFrame
+df = (
+spark.read
+.option("header", "true")
+.option("inferSchema", "true")
+.option("multiLine","true")
+.option("escape", "\"")
+.csv("./data/lightcast_job_postings.csv"))
+
+# df.printSchema() # comment this line when rendering the submission
+df.show(5)
+
+np.random.seed(42)
+
+# Show Schema and Sample Data
+# print("---This is Diagnostic check, No need to print it in the final doc---")
+```
+
+```{python}
+# Variable Selection
+y_col = "SALARY"
+min_years = "MIN_YEARS_EXPERIENCE"
+cont_cols = ["MAX_YEARS_EXPERIENCE", "DURATION", "SALARY_FROM"]
+cat_cols = ["COMPANY_NAME", "LOT_V6_SPECIALIZED_OCCUPATION_NAME"]
+
+# Data clean up -- dropping NAs 
+from pyspark.sql.functions import col
+
+required_cols = [y_col, min_years] + cont_cols + cat_cols
+missing = [c for c in required_cols if c not in df.columns]
+if missing:
+    raise ValueError(f"Missing columns in DataFrame: {missing}")
+
+df_clean = df.dropna(subset=required_cols)
+
+# Casting numeric columns to double (Tip found on Reddit)
+for c in [y_col, min_years] + cont_cols:
+    df_clean = df_clean.withColumn(c, col(c).cast("double"))
+
+# Check
+print("[OK] Variables set and data cleaned.")
+print("[vars] continuous:", cont_cols, "| + min_years:", min_years)
+print("[vars] categorical:", cat_cols)
+```
+
+```{python}
+# Encoders for categories
+from pyspark.ml.feature import StringIndexer, OneHotEncoder
+
+indexers = [
+    StringIndexer(
+        inputCol=c,
+        outputCol=f"{c}_idx",
+        handleInvalid="keep",           # keep unseen/invalid as a special bucket
+        stringOrderType="frequencyDesc" # optional: stable index ordering
+    )
+    for c in cat_cols
+]
+
+encoder = OneHotEncoder(
+    inputCols=[f"{c}_idx" for c in cat_cols],
+    outputCols=[f"{c}_ohe" for c in cat_cols],
+    handleInvalid="keep"
+)
+
+# Derived columns with SQLTransformer
+from pyspark.ml.feature import SQLTransformer
+
+add_square = SQLTransformer(
+    statement=f"SELECT *, POW({min_years}, 2.0) AS {min_years}_SQ FROM __THIS__"
+)
+
+# Ensure numeric label for ML
+add_label = SQLTransformer(
+    statement=f"SELECT *, CAST({y_col} AS DOUBLE) AS label FROM __THIS__"
+)
+
+# Assemble base & polynomial features
+from pyspark.ml.feature import VectorAssembler
+
+# features = 3 continuous + MIN_YEARS_EXPERIENCE + 2 OHE categoricals
+feature_cols = cont_cols + [min_years] + [f"{c}_ohe" for c in cat_cols]
+assembler = VectorAssembler(inputCols=feature_cols, outputCol="features")
+
+# polynomial features from MIN_YEARS_EXPERIENCE only
+poly_cols = [min_years, f"{min_years}_SQ"]
+poly_assembler = VectorAssembler(inputCols=poly_cols, outputCol="features_poly")
+
+# Pipeline
+from pyspark.ml import Pipeline
+
+pipeline = Pipeline(stages=indexers + [encoder, add_square, add_label, assembler, poly_assembler])
+
+# Fit & transform
+model = pipeline.fit(df_clean)
+final_df = model.transform(df_clean)
+
+# Train / test split
+train_df, test_df = final_df.randomSplit([0.8, 0.2], seed=42)
+
+# Inspect final structure
+final_df.select(
+    "label",
+    min_years,
+    f"{min_years}_SQ",
+    *cont_cols,
+    *[f"{c}_idx" for c in cat_cols],
+    *[f"{c}_ohe" for c in cat_cols],
+    "features",
+    "features_poly"
+).printSchema()
+
+final_df.select(
+    "label", min_years, f"{min_years}_SQ", "features", "features_poly"
+).show(5, truncate=False)
