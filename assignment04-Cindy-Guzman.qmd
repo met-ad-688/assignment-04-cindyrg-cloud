@@ -305,9 +305,6 @@ display(coef_pd)
 coef_path = Path("_output/coef_table.csv")
 coef_pd.to_csv(coef_path, index=False)
 print(f"Saved: {coef_path}")
-coef_path = Path("_output/coef_table.csv")
-coef_pd.to_csv(coef_path, index=False)
-print(f"Saved: {coef_path}")
 ```
 
 #### GLR Coefficients — Interpretation
@@ -522,6 +519,7 @@ fig_coef.show()
 
 coef_png = Path("_output/glr_coefficients_ci.png")
 pio.write_image(fig_coef, str(coef_png), scale=2)  # <— Plotly save
+pio.write_html(fig_coef, "_output/glr_coefficients_ci.html", include_plotlyjs="cdn")
 print(f"Saved: {coef_png}")
 ```
 
