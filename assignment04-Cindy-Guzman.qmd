@@ -16,219 +16,196 @@ format:
     theme: lux
     toc: true
     toc-depth: 2
-
 execute:
   echo: false
   eval: true
   freeze: auto
 ---
+
 ## Executive Abstract
-This project builds and evaluates salary prediction models on Lightcast job-posting data. After enforcing sanity filters (positive salaries; non-negative experience), categorical fields were encoded with frequency-ordered indices and one-hot encoding, and numerical features were assembled for modeling. We trained four regressors—Generalized Linear Regression (GLR), Linear Regression, Polynomial Regression (quadratic in `MIN_YEARS_EXPERIENCE`), and Random Forest.
-
-Performance was assessed on a held-out 20% test set using RMSE, MAE, and R². We also report AIC/BIC for linear models (and a proxy for RF) to provide a rough parsimony view. Visual diagnostics include a 2×2 actual-vs-predicted panel, GLR coefficients with 95% CIs for interpretability, and Random Forest feature importances for non-linear signal discovery.
-
-Based on the metrics table, **Generalized Linear Regression (GLR)** and **Linear Regression** achieve the strongest overall fit, each with RMSE ≈ **8,074** and R² = **0.95**. Diagnostics show tight alignment around the 1:1 line in the central salary band, with expected error spread at the extremes (typical of right-skewed wages). Findings suggest experience and specialized occupation signals are key drivers, while noting limitations from omitted covariates (e.g., geography, benefits) and high category cardinality.
-
-
+This project builds and evaluates salary prediction models on Lightcast job-posting data. After enforcing sanity filters (positive salaries; non-negative experience), categorical fields were encoded and assembled for modeling. We trained four regressors—Generalized Linear Regression (GLR), Linear Regression, Polynomial Regression (quadratic in `MIN_YEARS_EXPERIENCE`), and Random Forest—and report test RMSE/MAE/R², along with coefficient/t-value summaries for interpretability. Artifacts are saved under `_output/`.
 
 ```{python}
-# Set Up
+# --- Setup ---
 from pyspark.sql import SparkSession
-import pandas as pd
-import plotly.express as px
-import plotly.io as pio
-import numpy as np
+from pyspark.sql import functions as F
+from pyspark.ml.feature import (
+    StringIndexer, OneHotEncoder, OneHotEncoderModel,
+    SQLTransformer, VectorAssembler
+)
+from pyspark.ml import Pipeline
+from pyspark.ml.regression import GeneralizedLinearRegression, LinearRegression, RandomForestRegressor
+
+import numpy as np, pandas as pd, matplotlib.pyplot as plt, seaborn as sns
+import plotly.express as px, plotly.io as pio
+from math import erf, sqrt
 from pathlib import Path
-import sys, subprocess
+import os, sys, subprocess
+
+# Ensure required packages for image export
 subprocess.run([sys.executable, "-m", "pip", "install", "kaleido"], check=False)
 
-
-# Use a renderer that works during Quarto render
 pio.renderers.default = "plotly_mimetype"
+sns.set_theme(style="whitegrid")
 
-# Start a Spark session
-spark = SparkSession.builder.appName("LightcastData").getOrCreate()
+# Start Spark (quiet logs)
+try:
+    spark
+except NameError:
+    spark = SparkSession.builder.appName("LightcastData").getOrCreate()
+spark.sparkContext.setLogLevel("WARN")
 
 np.random.seed(42)
+OUTPUT_DIR = Path("_output")
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-import sys, subprocess
-subprocess.run([sys.executable, "-m", "pip", "install", "seaborn", "matplotlib"], check=False)
-
-print("[OK] Setup complete.")   
+print("[OK] Environment initialized")
 ```
 
 ```{python}
-# Path relative to this document's working directory
-data_path = Path("data") / "lightcast_job_postings.csv"
-
-# Load the CSV file into a Spark DataFrame
+# Load CSV
 df = (
-spark.read
-.option("header", "true")
-.option("inferSchema", "true")
-.option("multiLine","true")
-.option("escape", "\"")
-.csv("./data/lightcast_job_postings.csv"))
+    spark.read
+    .option("header", "true")
+    .option("inferSchema", "true")
+    .option("multiLine", "true")
+    .option("escape", "\"")
+    .csv("./data/lightcast_job_postings.csv")
+)
 
-# df.printSchema() # comment this line when rendering the submission
-df.show(5)
-```
-
-
-```{python}
-# Data clean up -- dropping NAs 
-from pyspark.sql.functions import col, trim
-
-# Variable Selection
+# Target and key columns
 candidate_y = ["Average_Salary", "SALARY", "AVERAGE_SALARY"]
 y_col = next((c for c in candidate_y if c in df.columns), None)
 if y_col is None:
-    raise ValueError(f"None of {candidate_y} found. Available columns: {df.columns}")
+    raise ValueError(f"None of {candidate_y} found. Available: {df.columns}")
+
+# Enforce assignment requirement: use SALARY if present
+if "SALARY" in df.columns:
+    y_col = "SALARY"
 
 min_years = "MIN_YEARS_EXPERIENCE" if "MIN_YEARS_EXPERIENCE" in df.columns else None
 max_years = "MAX_YEARS_EXPERIENCE" if "MAX_YEARS_EXPERIENCE" in df.columns else None
-
 if min_years is None:
-    raise ValueError("Expected MIN_YEARS_EXPERIENCE in the dataset for polynomial term.")
+    raise ValueError("Expected MIN_YEARS_EXPERIENCE in dataset for polynomial term.")
 
+# numeric & categorical candidates (kept small on purpose)
 cont_cols = []
 for c in [max_years, "DURATION", "SALARY_FROM"]:
     if c and c in df.columns:
         cont_cols.append(c)
-
-# minimal categorical set you actually use in the pipeline
 cat_cols = [c for c in ["COMPANY_NAME", "LOT_V6_SPECIALIZED_OCCUPATION_NAME"] if c in df.columns]
 
 required_cols = [y_col, min_years] + cont_cols + cat_cols
 missing = [c for c in required_cols if c not in df.columns]
 if missing:
-    raise ValueError(f"Missing columns in DataFrame: {missing}")
+    raise ValueError(f"Missing expected columns: {missing}")
 
-# Drop NA on required + filter positive numeric values
+# Cast numerics and filter sanity ranges
 df_clean = df.dropna(subset=required_cols)
-numeric_cols = [y_col, min_years] + [c for c in cont_cols if c is not None]
+for c in [y_col, min_years] + [c for c in cont_cols if c]:
+    df_clean = df_clean.withColumn(c, F.col(c).cast("double"))
 
-for c in numeric_cols:
-    df_clean = df_clean.withColumn(c, col(c).cast("double"))
-
-# Require strictly positive salary and nonnegative/positive experience
 df_clean = (
     df_clean
-    .filter(col(y_col) > 0)
-    .filter(col(min_years) >= 0)
+    .filter(F.col(y_col) > 0)          # positive salary
+    .filter(F.col(min_years) >= 0)     # non-negative experience
 )
 
-# Optional: cap insane salary outliers (winsorize at 99.5% if needed)
-# from pyspark.sql import functions as F
-# q = df_clean.approxQuantile(y_col, [0.995], 0.01)[0]
-# df_clean = df_clean.withColumn(y_col, F.when(col(y_col) > q, q).otherwise(col(y_col)))
-
-print(f"[OK] Using target: {y_col}")
-print("[OK] Variables set and data cleaned.")
-print("[vars] continuous:", cont_cols, "| + min_years:", min_years)
+print("[OK] Cleaned rows:", df_clean.count())
+print("[vars] y:", y_col)
+print("[vars] numeric:", cont_cols + [min_years])
 print("[vars] categorical:", cat_cols)
-
 ```
-#### Data Preparation & Sanity Filters
-Rows missing required fields were dropped; numeric columns were cast for ML compatibility. We enforced **positive salaries** and **non-negative experience** to prevent invalid targets or inputs from biasing estimates. Optional winsorization is noted for extreme outliers. This yields a reproducible, clean dataset for the subsequent train/test split and modeling pipeline.
-
 
 ```{python}
-# Encoders for categories
-from pyspark.ml.feature import StringIndexer, OneHotEncoder, SQLTransformer, VectorAssembler
-from pyspark.ml import Pipeline
-
+# Index + OneHot
 indexers = [
-    StringIndexer(
-        inputCol=c,
-        outputCol=f"{c}_idx",
-        handleInvalid="keep",           # keep unseen/invalid as a special bucket
-        stringOrderType="frequencyDesc" 
-    )
+    StringIndexer(inputCol=c, outputCol=f"{c}_idx",
+                  handleInvalid="keep", stringOrderType="frequencyDesc")
     for c in cat_cols
 ]
-
 encoder = OneHotEncoder(
     inputCols=[f"{c}_idx" for c in cat_cols],
     outputCols=[f"{c}_ohe" for c in cat_cols],
     handleInvalid="keep"
 )
 
-
+# Quadratic term for MIN_YEARS_EXPERIENCE
 add_square = SQLTransformer(
     statement=f"SELECT *, POW({min_years}, 2.0) AS {min_years}_SQ FROM __THIS__"
 )
 
-# Ensure numeric label for ML
+# Numeric label
 add_label = SQLTransformer(
     statement=f"SELECT *, CAST({y_col} AS DOUBLE) AS label FROM __THIS__"
 )
 
-# Assemble base & polynomial features
-from pyspark.ml.feature import VectorAssembler
-
-# features = 3 continuous + MIN_YEARS_EXPERIENCE + 2 OHE categoricals
+# Assemblers: linear features & polynomial-only features
 feature_cols = cont_cols + [min_years] + [f"{c}_ohe" for c in cat_cols]
 assembler = VectorAssembler(inputCols=feature_cols, outputCol="features")
 
-# polynomial features from MIN_YEARS_EXPERIENCE only
 poly_cols = [min_years, f"{min_years}_SQ"]
 poly_assembler = VectorAssembler(inputCols=poly_cols, outputCol="features_poly")
 
 pipeline = Pipeline(stages=indexers + [encoder, add_square, add_label, assembler, poly_assembler])
 
-# Fit & transform
 model = pipeline.fit(df_clean)
-final_df = model.transform(df_clean)
+full_df = model.transform(df_clean)
 
-print("[OK] Pipeline fitted and data transformed.")
-final_df.select("label", min_years, f"{min_years}_SQ", "features", "features_poly").show(5, truncate=False)
+print("[OK] Pipeline fit complete")
+full_df.select("label", min_years, f"{min_years}_SQ", "features", "features_poly").show(5, truncate=False)
 ```
-#### Feature Engineering
-Categorical variables were transformed via frequency-ordered `StringIndexer` and `OneHotEncoder` (with a defined reference level), then combined with numeric features using `VectorAssembler`. A quadratic term in `MIN_YEARS_EXPERIENCE` enables the polynomial model to capture curvature. Labels were explicitly cast to double to ensure compatibility across Spark ML estimators.
-
 
 ```{python}
-# 5) Add a stable row id and split
+# Prune created dataframe
 from pyspark.sql.functions import monotonically_increasing_id
 
-final_df = final_df.withColumn("row_id", monotonically_increasing_id())
-train_df, test_df = final_df.randomSplit([0.8, 0.2], seed=42)
+# Ensure a stable key
+if "row_id" not in full_df.columns:
+    full_df = full_df.withColumn("row_id", monotonically_increasing_id())
 
+# Minimal working set
+minimal_cols = ["row_id", "label", "features", "features_poly",
+                "MIN_YEARS_EXPERIENCE", "MAX_YEARS_EXPERIENCE", "DURATION", "SALARY_FROM"]
+final_df = full_df.select([c for c in minimal_cols if c in full_df.columns])
+
+print("[OK] Pruned final_df columns:", final_df.columns)
 ```
 
+```{python}
+# Train and Split
+train_df, test_df = final_df.randomSplit([0.8, 0.2], seed=42)
+print("[OK] Split sizes:", train_df.count(), test_df.count())
+```
 
 ```{python}
-# === GLR with robust coefficient table (with bootstrap fallback) ===
-from pyspark.ml.regression import GeneralizedLinearRegression
-from pyspark.sql import functions as F
-from pyspark.ml.feature import OneHotEncoderModel
-import numpy as np, pandas as pd
-from math import erf, sqrt
-
-# 1) Fit GLR (Gaussian/Identity) on train
-glr = GeneralizedLinearRegression(
-    featuresCol="features", labelCol="label",
-    family="gaussian", link="identity", maxIter=50
-)
+# GLR (Gaussian / Identity)
+glr = GeneralizedLinearRegression(featuresCol="features", labelCol="label", family="gaussian", link="identity", maxIter=50)
 glr_model = glr.fit(train_df)
 glr_summary = glr_model.summary
-
-# 2) Test metrics
 glr_test = glr_model.transform(test_df)
-glr_rmse = glr_test.select(F.sqrt(F.avg((F.col("label")-F.col("prediction"))**2)).alias("rmse")).first()["rmse"]
-glr_mae  = glr_test.select(F.avg(F.abs(F.col("label")-F.col("prediction"))).alias("mae")).first()["mae"]
 
-print("=== GLR (Gaussian/Identity) Results ===")
-print(f"Intercept: {glr_model.intercept:.4f}")
-print(f"AIC (train): {glr_summary.aic:.4f}")
-print(f"Deviance (train): {glr_summary.deviance:.4f} | Dispersion: {glr_summary.dispersion:.4f}")
-print(f"RMSE (test): {glr_rmse:.4f} | MAE (test): {glr_mae:.4f}")
+# Linear Regression (features)
+lr = LinearRegression(featuresCol="features", labelCol="label")
+lr_model = lr.fit(train_df)
+lr_test = lr_model.transform(test_df)
 
-# 3) Build expanded feature names that exactly match the coefficients length
+# Polynomial Linear Regression (features_poly)
+poly_lr = LinearRegression(featuresCol="features_poly", labelCol="label")
+poly_model = poly_lr.fit(train_df)
+poly_test = poly_model.transform(test_df)
+
+# Random Forest
+rf = RandomForestRegressor(featuresCol="features", labelCol="label", numTrees=200, maxDepth=6, seed=42)
+rf_model = rf.fit(train_df)
+rf_test = rf_model.transform(test_df)
+
+print("[OK] All models trained")
+```
+
+```{python}
+# Reconstruct expanded feature names (continuous + OHE columns)
 enc_model = next(s for s in model.stages if isinstance(s, OneHotEncoderModel))
-
-# account for dropLast behavior of the fitted OHE model
 drop_last = enc_model.getDropLast() if hasattr(enc_model, "getDropLast") else True
 
 expanded_features = cont_cols + [min_years]
@@ -237,308 +214,404 @@ for input_col, size_in in zip(enc_model.getInputCols(), enc_model.categorySizes)
     size_out = int(size_in) - (1 if drop_last else 0)
     expanded_features += [f"{base}_ohe_{i}" for i in range(size_out)]
 
+print(f"[OK] Expanded feature count = {len(expanded_features)}")
+```
+
+```{python}
+# Try native SE/t/p; if not present, bootstrap-estimate SE/t/p
 coefs = np.array(glr_model.coefficients.toArray(), dtype=float)
-print(f"[debug] coeffs: {len(coefs)} | feature names: {len(expanded_features)}")
 
-if len(coefs) != len(expanded_features):
-    # last resort: truncate/pad names to match (shouldn't happen, but keeps notebook running)
-    if len(expanded_features) > len(coefs):
-        expanded_features = expanded_features[:len(coefs)]
-    else:
-        expanded_features += [f"extra_{i}" for i in range(len(coefs)-len(expanded_features))]
+def norm_cdf(z): 
+    return 0.5 * (1.0 + erf(z / sqrt(2.0)))
 
-# 4) Try to pull SE/t/p; if Spark won’t provide them, estimate via bootstrap
-stderr = t_vals = p_vals = None
+use_native = True
 try:
-    stderr  = np.array(glr_summary.coefficientStandardErrors, dtype=float)
-    t_vals  = np.array(glr_summary.tValues, dtype=float)
-    p_vals  = np.array(glr_summary.pValues, dtype=float)
-    print("[info] Using GLR-provided standard errors/t/p.")
-except Exception as e:
-    print(f"[warn] Spark did not provide coefficient SE/t/p ({type(e).__name__}). Falling back to bootstrap…")
-    B = 40  # adjust if you want faster (smaller) or more stable (larger)
-    boot_coefs = []
+    se  = np.array(glr_summary.coefficientStandardErrors, dtype=float)
+    tval= np.array(glr_summary.tValues, dtype=float)
+    pval= np.array(glr_summary.pValues, dtype=float)
+except Exception:
+    use_native = False
 
+if not use_native:
+    print("[warn] Spark did not provide SE/t/p; estimating via bootstrap...")
+    B = 40
+    boot = []
     for b in range(B):
-        boot = train_df.sample(withReplacement=True, fraction=1.0, seed=1234 + b)
-        boot_model = GeneralizedLinearRegression(
-            featuresCol="features", labelCol="label",
-            family="gaussian", link="identity", maxIter=50
-        ).fit(boot)
-        c = np.array(boot_model.coefficients.toArray(), dtype=float)
-        # align length defensively
-        if len(c) == len(coefs):
-            boot_coefs.append(c)
-
-    boot_coefs = np.array(boot_coefs)
-    if boot_coefs.shape[0] < 3:
-        print("[warn] Not enough successful bootstrap fits to estimate SE. Reporting coefficients only.")
-        stderr = np.full_like(coefs, np.nan)
-        t_vals = np.full_like(coefs, np.nan)
-        p_vals = np.full_like(coefs, np.nan)
-    else:
-        stderr = boot_coefs.std(axis=0, ddof=1)
-        # Normal-approx t and p
+        samp = train_df.sample(withReplacement=True, fraction=1.0, seed=1234+b)
+        m = GeneralizedLinearRegression(featuresCol="features", labelCol="label",
+                                        family="gaussian", link="identity", maxIter=50).fit(samp)
+        c = np.array(m.coefficients.toArray(), dtype=float)
+        if len(c) == len(coefs): boot.append(c)
+    boot = np.array(boot)
+    if boot.shape[0] >= 3:
+        se = boot.std(axis=0, ddof=1)
         with np.errstate(divide='ignore', invalid='ignore'):
-            t_vals = coefs / stderr
-            # two-sided p using normal approx (no SciPy needed)
-            def norm_cdf(z): return 0.5 * (1.0 + erf(z / sqrt(2.0)))
-            p_vals = 2.0 * (1.0 - np.vectorize(norm_cdf)(np.abs(t_vals)))
+            tval = coefs / se
+            pval = 2.0 * (1.0 - np.vectorize(norm_cdf)(np.abs(tval)))
+    else:
+        se = np.full_like(coefs, np.nan); tval = np.full_like(coefs, np.nan); pval = np.full_like(coefs, np.nan)
 
-# 5) Build coefficient table with 95% CI (if SE available)
-coef_pd = pd.DataFrame({
-    "feature": expanded_features,
-    "coefficient": coefs,
-    "stderr": stderr,
-    "t_value": t_vals,
-    "p_value": p_vals
+# Align to names (defensive)
+L = min(len(coefs), len(expanded_features), len(se), len(tval), len(pval))
+glr_df = pd.DataFrame({
+    "feature": expanded_features[:L],
+    "coefficient": coefs[:L],
+    "std_error": se[:L],
+    "t_value": tval[:L],
+    "p_value": pval[:L]
 })
 
-if np.all(np.isnan(stderr)):
-    coef_pd["CI_lower"] = np.nan
-    coef_pd["CI_upper"] = np.nan
-else:
-    coef_pd["CI_lower"] = coef_pd["coefficient"] - 1.96 * coef_pd["stderr"]
-    coef_pd["CI_upper"] = coef_pd["coefficient"] + 1.96 * coef_pd["stderr"]
+# Intercept row (if native arrays include intercept, they're length L+1; if not, put NaNs)
+int_se  = float(se[-1])  if len(se)  >= len(coefs)+1 else np.nan
+int_tv  = float(tval[-1])if len(tval)>= len(coefs)+1 else np.nan
+int_pv  = float(pval[-1])if len(pval)>= len(coefs)+1 else np.nan
 
-display(coef_pd)
-coef_path = Path("_output/coef_table.csv")
-coef_pd.to_csv(coef_path, index=False)
-print(f"Saved: {coef_path}")
-```
+glr_df = pd.concat([glr_df, pd.DataFrame([{
+    "feature":"_intercept_",
+    "coefficient": float(glr_model.intercept),
+    "std_error": int_se,
+    "t_value": int_tv,
+    "p_value": int_pv
+}])], ignore_index=True)
 
-#### GLR Coefficients — Interpretation
-The table reports linear effects with standard errors, t-values, and 95% confidence intervals (bootstrap-based if Spark omits SEs).  
+# 95% CI
+glr_df["CI_lower"] = glr_df["coefficient"] - 1.96*glr_df["std_error"]
+glr_df["CI_upper"] = glr_df["coefficient"] + 1.96*glr_df["std_error"]
 
-- **Experience variables:** Both `MIN_YEARS_EXPERIENCE` and `MAX_YEARS_EXPERIENCE` show large, significant positive coefficients (~+495 per year), meaning additional required experience is strongly associated with higher posted salaries.  
-- **Contract duration:** `DURATION` also has a positive but smaller effect (~+27 per unit), suggesting longer postings modestly increase expected pay.  
-- **Salary floor:** `SALARY_FROM` behaves nearly 1:1 with the outcome (coef ≈ 0.98), confirming the model is anchored on the dataset’s internal baseline.  
-- **Employer effects:** Certain employers (e.g., `COMPANY_NAME_ohe_0`) show notable positive premiums (+2,370), reflecting company-specific pay scales.  
-- **Occupation effects:** Several specialized occupation categories contribute large negative coefficients (e.g., `LOT_V6_SPECIALIZED_OCCUPATION_NAME_ohe_9` ≈ –7,356), highlighting that some roles systematically pay below the overall mean.  
-
-Positive coefficients correspond to higher predicted salaries, negatives to lower, with interpretation always relative to the omitted reference category. Narrow confidence intervals signal more stable estimates, while wide intervals indicate categories with sparse data.
-
-While the GLR coefficients highlight interpretable linear relationships (experience and baseline pay driving salaries), the Random Forest importance chart provides a complementary non-linear view, ranking which features most consistently reduce prediction error across trees.
-
-
-```{python}
-# 7) Linear Regression & Polynomial LR (no std errors)
-from pyspark.ml.regression import LinearRegression
-
-# Linear
-lr = LinearRegression(featuresCol="features", labelCol="label")
-lr_model = lr.fit(train_df)
-lr_test = lr_model.transform(test_df)
-
-# Polynomial
-poly_lr = LinearRegression(featuresCol="features_poly", labelCol="label")
-poly_model = poly_lr.fit(train_df)
-poly_test = poly_model.transform(test_df)
-
+glr_df.to_csv(OUTPUT_DIR / "glr_summary.csv", index=False)
+print("Saved:", OUTPUT_DIR / "glr_summary.csv")
 ```
 
 ```{python}
-# 8) Random Forest + importances
-from pyspark.ml.regression import RandomForestRegressor
-import numpy as np, seaborn as sns, matplotlib.pyplot as plt
+# Polynomial LR Summary (t-values, CI)
+poly_names = [min_years, f"{min_years}_SQ"]
 
-rf = RandomForestRegressor(
-    featuresCol="features", labelCol="label",
-    numTrees=200, maxDepth=6, seed=42
-)
-rf_model = rf.fit(train_df)
-rf_test = rf_model.transform(test_df)
+lr_summ = poly_model.summary
+p_coefs = np.array(poly_model.coefficients.toArray(), dtype=float)
+p_se    = np.array(lr_summ.coefficientStandardErrors, dtype=float) if lr_summ.coefficientStandardErrors else np.full_like(p_coefs, np.nan)
+p_tv    = np.array(lr_summ.tValues, dtype=float) if lr_summ.tValues else np.full_like(p_coefs, np.nan)
+p_pv    = np.array(lr_summ.pValues, dtype=float) if lr_summ.pValues else np.full_like(p_coefs, np.nan)
 
-# Feature importances aligned to expanded_features
-rf_importances = np.array(rf_model.featureImportances.toArray())
-fi = pd.DataFrame({"feature": expanded_features, "importance": rf_importances})
-fi = fi.sort_values("importance", ascending=False).head(10)
+poly_df = pd.DataFrame({
+    "feature": poly_names[:len(p_coefs)],
+    "coefficient": p_coefs[:len(poly_names)],
+    "std_error": p_se[:len(poly_names)],
+    "t_value": p_tv[:len(poly_names)],
+    "p_value": p_pv[:len(poly_names)]
+})
 
-plt.figure(figsize=(8,5))
-sns.barplot(data=fi, y="feature", x="importance")
-plt.title("Random Forest — Top 10 Feature Importances")
-plt.tight_layout()
-Path("_output").mkdir(parents=True, exist_ok=True)
-plt.savefig("_output/rf_feature_importance.png", dpi=180)
-plt.show()
-print("Saved: _output/rf_feature_importance.png")
+# Intercept (if arrays include it as an extra element, use it; else NaN)
+p_int_se = float(p_se[-1]) if len(p_se) >= len(p_coefs)+1 else np.nan
+p_int_tv = float(p_tv[-1]) if len(p_tv) >= len(p_coefs)+1 else np.nan
+p_int_pv = float(p_pv[-1]) if len(p_pv) >= len(p_coefs)+1 else np.nan
+
+poly_df = pd.concat([poly_df, pd.DataFrame([{
+    "feature": "_intercept_",
+    "coefficient": float(poly_model.intercept),
+    "std_error": p_int_se,
+    "t_value": p_int_tv,
+    "p_value": p_int_pv
+}])], ignore_index=True)
+
+poly_df["CI_lower"] = poly_df["coefficient"] - 1.96*poly_df["std_error"]
+poly_df["CI_upper"] = poly_df["coefficient"] + 1.96*poly_df["std_error"]
+
+poly_df.to_csv(OUTPUT_DIR / "polylr_summary.csv", index=False)
+print("Saved:", OUTPUT_DIR / "polylr_summary.csv")
 ```
-#### Random Forest — Top Features
-The bar chart ranks variables by relative importance in the ensemble splits.  
-
-- **Baseline salary (`SALARY_FROM`) dominates** with nearly two-thirds of the total importance (≈ 0.65). This confirms the model relies heavily on the salary floor column to anchor predictions.  
-- **Experience measures still matter:** `MAX_YEARS_EXPERIENCE` (0.14) and `MIN_YEARS_EXPERIENCE` (0.08) together explain ~22% of the variance, consistent with the linear model’s finding that required tenure strongly drives wages.  
-- **Categorical signals are secondary but present:** Certain specialized occupation categories (e.g., `_ohe_4`, ~0.03) and specific companies (e.g., `COMPANY_NAME_ohe_140`, ~0.029) show measurable influence, reflecting job- or employer-specific pay premiums/discounts.  
-- **Other factors are marginal:** Additional companies, occupations, and `DURATION` carry very low importances (<0.01), indicating limited predictive weight in the RF splits.  
-
-Overall, Random Forest emphasizes the **salary floor plus experience** as the main levers, with categorical categories only modestly affecting prediction accuracy.
-
-
 
 ```{python}
-# 9) Unified metrics & plots (safe join on row_id, no ambiguous label)
+# T-values significance and top drivers
+ALPHA_T = 1.96  # ~ two-sided 5%
 
-from pyspark.sql import functions as F
-import numpy as np, pandas as pd, matplotlib.pyplot as plt
-from pathlib import Path
+def export_sig_tables(df, prefix):
+    df = df.copy()
+    if "t_value" not in df.columns:
+        print(f"[warn] No t_value in {prefix}, skipping.")
+        return
+    df["abs_t"] = df["t_value"].abs()
+    sig = df[df["abs_t"] >= ALPHA_T].sort_values("abs_t", ascending=False)
+    top_pos = df.sort_values("t_value", ascending=False).head(15)
+    top_neg = df.sort_values("t_value", ascending=True).head(15)
+    sig.to_csv(OUTPUT_DIR / f"{prefix}_significant.csv", index=False)
+    top_pos.to_csv(OUTPUT_DIR / f"{prefix}_top_positive_t.csv", index=False)
+    top_neg.to_csv(OUTPUT_DIR / f"{prefix}_top_negative_t.csv", index=False)
+    print(f"Saved: {prefix}_significant/top_positive_t/top_negative_t")
 
-# --- Keep label only once (from GLR) ---
+export_sig_tables(glr_df, "glr")
+export_sig_tables(poly_df, "poly")
+```
+
+```{python}
+# Join predictions on row_id, keep a compact table
 p_glr = glr_test.select("row_id", F.col("label").alias("label"), F.col("prediction").alias("pred_glr"))
 p_lr  = lr_test.select("row_id", F.col("prediction").alias("pred_lr"))
 p_pr  = poly_test.select("row_id", F.col("prediction").alias("pred_poly"))
 p_rf  = rf_test.select("row_id", F.col("prediction").alias("pred_rf"))
 
-# Inner-join on row_id (stable key we added before the split)
-joined = (
-    p_glr.join(p_lr, "row_id", "inner")
-         .join(p_pr, "row_id", "inner")
-         .join(p_rf, "row_id", "inner")
-)
-
-# To Pandas for metrics/plots
+joined = p_glr.join(p_lr, "row_id", "inner").join(p_pr, "row_id", "inner").join(p_rf, "row_id", "inner")
 pdf = joined.select("label","pred_glr","pred_lr","pred_poly","pred_rf").toPandas().dropna()
 
-# --- Targets & predictions ---
-y = pdf["label"].values
-preds = {
-    "GLR":         pdf["pred_glr"].values,
-    "Linear":      pdf["pred_lr"].values,
-    "Polynomial":  pdf["pred_poly"].values,
-    "RandomForest":pdf["pred_rf"].values
-}
-
-# --- Helper metrics ---
 def rmse(y, yhat): 
     return float(np.sqrt(np.mean((y - yhat)**2)))
+
+y = pdf["label"].values
+preds = {
+    "GLR": pdf["pred_glr"].values,
+    "Linear": pdf["pred_lr"].values,
+    "Polynomial": pdf["pred_poly"].values,
+    "RandomForest": pdf["pred_rf"].values
+}
+
+# Parameter counts (linear) and a proxy for RF
+k_glr  = len(glr_model.coefficients) + 1
+k_lr   = len(lr_model.coefficients) + 1
+k_poly = len(poly_model.coefficients) + 1
+k_rf   = len(expanded_features) + 1  # heuristic for AIC/BIC proxy
 
 def aic_bic(y, yhat, k):
     n = len(y)
     sse = float(np.sum((y - yhat)**2))
-    if n <= 0 or sse <= 0:
-        return np.nan, np.nan
+    if n <= 0 or sse <= 0: return np.nan, np.nan
     sigma2 = sse / n
-    # Gaussian OLS log-likelihood
     logL = -0.5 * n * (np.log(2*np.pi*sigma2) + 1.0)
     AIC = 2*k - 2*logL
     BIC = k*np.log(n) - 2*logL
     return float(AIC), float(BIC)
 
-# --- Parameter counts ---
-k_glr  = len(glr_model.coefficients) + 1
-k_lr   = len(lr_model.coefficients) + 1
-k_poly = len(poly_model.coefficients) + 1
-k_rf   = len(expanded_features) + 1  # proxy; tree models don't have linear params but we need *some* k for AIC/BIC comparability
-
-# --- Build and save metrics table ---
 rows = []
 for name, yhat in preds.items():
     k = {"GLR": k_glr, "Linear": k_lr, "Polynomial": k_poly, "RandomForest": k_rf}[name]
-    rows.append({
-        "Model": name,
-        "RMSE": rmse(y, yhat),
-        "MAE": float(np.mean(np.abs(y - yhat))),
-        "R2": (1 - np.sum((y - yhat)**2) / np.sum((y - np.mean(y))**2)) if np.sum((y - np.mean(y))**2) > 0 else np.nan,
-        **dict(zip(["AIC","BIC"], aic_bic(y, yhat, k)))
-    })
+    R2 = 1 - np.sum((y - yhat)**2) / np.sum((y - np.mean(y))**2) if np.sum((y - np.mean(y))**2) > 0 else np.nan
+    AIC, BIC = aic_bic(y, yhat, k)
+    rows.append({"Model": name, "RMSE": rmse(y, yhat), "MAE": float(np.mean(np.abs(y - yhat))), "R2": R2, "AIC": AIC, "BIC": BIC})
 
-metrics_df = pd.DataFrame(rows).sort_values("RMSE")
-Path("_output").mkdir(parents=True, exist_ok=True)
-metrics_path = Path("_output/metrics_table.csv")
-metrics_df.to_csv(metrics_path, index=False)
-print(f"Saved metrics: {metrics_path}")
-display(metrics_df)
+metrics_df = pd.DataFrame(rows)
+
+# === GLR exact log-likelihood & BIC per assignment 7.1 (train summary) ===
+n_glr = int(glr_summary.numInstances)
+disp  = float(glr_summary.dispersion)
+dev   = float(glr_summary.deviance)
+logL_glr = -0.5 * ( n_glr * np.log(2*np.pi) + n_glr * np.log(disp) + dev / disp )
+bic_glr_exact = k_glr * np.log(n_glr) - 2.0 * logL_glr
+
+# Override GLR BIC with exact formula; add logL column
+metrics_df.loc[metrics_df["Model"] == "GLR", "BIC"] = bic_glr_exact
+if "logL" not in metrics_df.columns:
+    metrics_df["logL"] = np.nan
+metrics_df.loc[metrics_df["Model"] == "GLR", "logL"] = logL_glr
+
+metrics_df = metrics_df.sort_values("RMSE")
+metrics_df.to_csv(OUTPUT_DIR / "metrics_table.csv", index=False)
+pdf.to_csv(OUTPUT_DIR / "predictions_clean.csv", index=False)
+
+print("Saved:", OUTPUT_DIR / "metrics_table.csv")
+print("Saved:", OUTPUT_DIR / "predictions_clean.csv")
+metrics_df
 ```
-#### Metrics Table — Interpretation
-All models are evaluated on the same 20% test split. **RMSE** is the primary selection metric (lower is better), supported by **MAE** and **R²** for error magnitude and explained variance.
-
-- **Top performer:** **GLR/Linear** models are tied for best, with RMSE ≈ **8,074** and R² = **0.95**, showing the strongest generalization on this split.  
-- **Linear vs Polynomial:** The polynomial model drastically underperformed (RMSE ≈ 26,520 vs. 8,074), suggesting the quadratic term in `MIN_YEARS_EXPERIENCE` added noise rather than improving fit.  
-- **Random Forest:** RF was worse than linear models (RMSE ≈ 11,347 vs. 8,074), indicating limited benefit from non-linear splits given this feature set.  
-- **AIC/BIC note:** AIC/BIC values confirm the linear/GLR models as most parsimonious. However, because Random Forest is not a likelihood-based model, its AIC/BIC values are based on a proxy parameter count. Comparisons involving RF should therefore be treated as heuristic, not as strict model selection criteria.
-
-
-
 
 ```{python}
-# 10) Actual vs Predicted — 2x2 grid with 1:1 line (saved)
-import matplotlib.pyplot as plt
-from pathlib import Path
+# Actual vs Predicted (2x2) — Seaborn
+import seaborn as sns
+sns.set_theme(style="whitegrid")
 
 models_order = ["GLR", "Linear", "Polynomial", "RandomForest"]
-
-fig_avp, axes = plt.subplots(2, 2, figsize=(10, 9))
-axes = axes.ravel()
-
 ymin, ymax = float(np.min(y)), float(np.max(y))
-diag_min, diag_max = ymin, ymax
+pad = 0.03 * (ymax - ymin)
+lo, hi = ymin - pad, ymax + pad
+
+fig, axes = plt.subplots(2, 2, figsize=(11, 9))
+axes = axes.ravel()
 
 for ax, m in zip(axes, models_order):
     yhat = preds[m]
-    ax.scatter(y, yhat, s=10, alpha=0.5)
-    ax.plot([diag_min, diag_max], [diag_min, diag_max], linestyle="--")
-    ax.set_title(f"Actual vs Predicted — {m}")
-    ax.set_xlabel("Actual")
-    ax.set_ylabel("Predicted")
+    n = len(y)
+    idx = np.arange(n if n <= 4000 else 4000)
+    if n > 4000:
+        idx = np.random.choice(n, 4000, replace=False)
+    sns.scatterplot(x=y[idx], y=yhat[idx], s=12, alpha=0.45, ax=ax, legend=False)
+    ax.plot([lo, hi], [lo, hi], linestyle="--", linewidth=1, color="black")
+    ax.set_xlim(lo, hi); ax.set_ylim(lo, hi)
+    rmse_val = float(np.sqrt(np.mean((y - yhat)**2)))
+    r2_val = 1 - np.sum((y - yhat)**2) / np.sum((y - np.mean(y))**2)
+    ax.set_title(f"{m}  (RMSE={rmse_val:,.0f}, R²={r2_val:.3f})", pad=6, fontsize=11)
+    ax.set_xlabel("Actual"); ax.set_ylabel("Predicted")
 
-plt.tight_layout()
-Path("_output").mkdir(parents=True, exist_ok=True)
-avp_path = Path("_output/actual_vs_pred_2x2.png")
-fig_avp.savefig(avp_path, dpi=180)   # <— Matplotlib save
+plt.suptitle("Actual vs Predicted — Test Set", fontsize=14, y=0.99)
+plt.tight_layout(rect=[0,0,1,0.97])
+plt.savefig(OUTPUT_DIR / "actual_vs_pred_2x2.png", dpi=300, bbox_inches="tight")
 plt.show()
-print(f"Saved: {avp_path}")
+print("Saved:", OUTPUT_DIR / "actual_vs_pred_2x2.png")
 ```
-#### Actual vs Predicted — Diagnostic Read
-Each panel plots predictions against the ground-truth with a 1:1 line. Tighter clustering around the diagonal indicates better fit.
-
-- **Center mass:** **GLR/Linear** predictions cluster most tightly around the diagonal, reflecting the best calibration in the central salary band.  
-- **Extremes:** Wider dispersion at very high salaries suggests limited data and right-skew drive residual spread—common in wage data.  
-- **Bias check:** Panels do not show strong systematic over/under-prediction across the core range, indicating calibrated central tendency.
-
 
 ```{python}
-# 11) GLR Coefficients — Plotly figure + PNG export
+# GLR coefficients with CI — presentation-ready (top-|t|, clean labels)
+import pandas as pd, textwrap
+from pyspark.ml.feature import StringIndexerModel
 import plotly.express as px
 import plotly.io as pio
-from pathlib import Path
-import sys, subprocess
 
-# ensure kaleido for image export
-try:
-    import kaleido  # noqa: F401
-except Exception:
-    subprocess.run([sys.executable, "-m", "pip", "install", "kaleido"], check=False)
+TOP_N = 25         # show top 25 effects by |t|
+WRAP_CHARS = 36    # wrap long labels for readability
 
-coef_plot = coef_pd.sort_values("coefficient")
+# map original categorical col -> StringIndexerModel
+indexer_models = {}
+for s in model.stages:
+    if isinstance(s, StringIndexerModel):
+        indexer_models[s.getInputCol()] = s
+
+def humanize_base(col):
+    col = col.replace("_idx","").replace("_ohe","")
+    col = col.replace("LOT_V6_SPECIALIZED_OCCUPATION_NAME", "Occupation")
+    col = col.replace("COMPANY_NAME", "Company")
+    col = col.replace("MIN_YEARS_EXPERIENCE", "Min Yrs Exp")
+    col = col.replace("MAX_YEARS_EXPERIENCE", "Max Yrs Exp")
+    col = col.replace("DURATION", "Duration")
+    col = col.replace("SALARY_FROM", "Salary Floor")
+    return col
+
+# Turn OHE feature names like "Company_ohe_12" into "Company: <label>"
+pretty_names = []
+for f in glr_df["feature"]:
+    if f == "_intercept_":
+        pretty_names.append("Intercept")
+        continue
+    if "_ohe_" in f:
+        base, idx = f.split("_ohe_")
+        base_h = humanize_base(base)
+        idx_model = indexer_models.get(base)
+        label = None
+        try:
+            ii = int(idx)
+            if idx_model is not None and ii < len(idx_model.labels):
+                label = idx_model.labels[ii]
+        except Exception:
+            pass
+        label = label if label else f"level_{idx}"
+        pretty_names.append(f"{base_h}: {label}")
+    else:
+        pretty_names.append(humanize_base(f))
+
+plot_df = glr_df.copy()
+plot_df["pretty"] = pretty_names
+# choose top by |t| when available; otherwise by |coef|
+if "t_value" in plot_df.columns and plot_df["t_value"].notna().any():
+    plot_df = plot_df.assign(abs_t=plot_df["t_value"].abs()).sort_values("abs_t", ascending=False)
+else:
+    plot_df = plot_df.assign(abs_c=plot_df["coefficient"].abs()).sort_values("abs_c", ascending=False)
+
+plot_df = plot_df.head(TOP_N).sort_values("coefficient")  # plot from negative to positive
+
+# wrap labels
+plot_df["pretty_wrapped"] = plot_df["pretty"].apply(lambda s: "<br>".join(textwrap.wrap(s, WRAP_CHARS)))
+
 fig_coef = px.bar(
-    coef_plot, x="coefficient", y="feature", orientation="h",
-    title="GLR Coefficients with 95% CI",
-    error_x=coef_plot["CI_upper"] - coef_plot["coefficient"],
-    error_x_minus=coef_plot["coefficient"] - coef_plot["CI_lower"]
+    plot_df,
+    x="coefficient", y="pretty_wrapped", orientation="h",
+    title=f"GLR Coefficients (Top {TOP_N} by |t|) with 95% CI",
+    error_x=plot_df["CI_upper"] - plot_df["coefficient"],
+    error_x_minus=plot_df["coefficient"] - plot_df["CI_lower"],
+    template="simple_white",
 )
+fig_coef.update_layout(
+    margin=dict(l=10, r=10, t=60, b=10),
+    xaxis_title="Coefficient (Δ Salary)",
+    yaxis_title="",
+)
+fig_coef.update_traces(hovertemplate="<b>%{y}</b><br>Coef=%{x:.2f}<extra></extra>")
 fig_coef.show()
 
-coef_png = Path("_output/glr_coefficients_ci.png")
-pio.write_image(fig_coef, str(coef_png), scale=2)  # <— Plotly save
-pio.write_html(fig_coef, "_output/glr_coefficients_ci.html", include_plotlyjs="cdn")
-print(f"Saved: {coef_png}")
+pio.write_image(fig_coef, str(OUTPUT_DIR / "glr_coefficients_ci.png"), scale=2)
+pio.write_html(fig_coef, str(OUTPUT_DIR / "glr_coefficients_ci.html"), include_plotlyjs="cdn")
+print("Saved:", OUTPUT_DIR / "glr_coefficients_ci.png")
 ```
 
 ```{python}
-print(type(fig_avp))   # should be matplotlib.figure.Figure
-print(type(fig_coef))  # should be plotly.graph_objs._figure.Figure
+# Random Forest — Top Features (presentation-ready labels + annotations, Seaborn)
+import numpy as np, pandas as pd, matplotlib.pyplot as plt, textwrap
+from pyspark.ml.feature import OneHotEncoderModel, StringIndexerModel
+import seaborn as sns
+
+TOP_K = 12
+WRAP_CHARS = 38
+
+# 1) pull encoder + indexers
+enc_model = next(s for s in model.stages if isinstance(s, OneHotEncoderModel))
+drop_last = enc_model.getDropLast() if hasattr(enc_model, "getDropLast") else True
+
+indexer_models = {}
+for s in model.stages:
+    if isinstance(s, StringIndexerModel):
+        indexer_models[s.getInputCol()] = s
+
+# 2) humanizing helpers
+def humanize_base(col):
+    col = col.replace("_idx","").replace("_ohe","")
+    col = col.replace("LOT_V6_SPECIALIZED_OCCUPATION_NAME", "Occupation")
+    col = col.replace("COMPANY_NAME", "Company")
+    col = col.replace("MIN_YEARS_EXPERIENCE", "Min Yrs Exp")
+    col = col.replace("MAX_YEARS_EXPERIENCE", "Max Yrs Exp")
+    col = col.replace("DURATION", "Duration")
+    col = col.replace("SALARY_FROM", "Salary Floor")
+    return col
+
+# assembler order
+assembler_inputs = cont_cols + [min_years] + [f"{c}_ohe" for c in cat_cols]
+
+# emitted width for each OHE output after dropLast
+ohe_width = {}
+for input_c, output_c, sz in zip(enc_model.getInputCols(), enc_model.getOutputCols(), enc_model.categorySizes):
+    ohe_width[output_c] = int(sz) - (1 if drop_last else 0)
+
+# Build pretty names to match the vector order used by RF
+pretty_feature_names = []
+for c in assembler_inputs:
+    if c.endswith("_ohe"):
+        base_col = c.replace("_ohe","")
+        idx_model = indexer_models.get(base_col)
+        labels = idx_model.labels if idx_model is not None else []
+        width = ohe_width.get(c, 0)
+        for i in range(width):
+            label_i = labels[i] if i < len(labels) else f"level_{i}"
+            pretty_feature_names.append(f"{humanize_base(base_col)}: {label_i}")
+    else:
+        pretty_feature_names.append(humanize_base(c))
+
+# 3) align & pick top-K
+imps = np.array(rf_model.featureImportances.toArray(), dtype=float)
+L = min(len(pretty_feature_names), len(imps))
+names = pretty_feature_names[:L]
+imps  = imps[:L]
+
+fi = (
+    pd.DataFrame({"feature": names, "importance": imps})
+      .sort_values("importance", ascending=False)
+      .head(TOP_K)
+      .sort_values("importance", ascending=True)  # nicer bars bottom-up
+)
+
+# 4) plot (Seaborn to satisfy assignment wording)
+plt.figure(figsize=(11, 6.5))
+ax = sns.barplot(data=fi, y="feature", x="importance", orient="h")
+ax.grid(axis="x", linestyle=":", linewidth=0.7, alpha=0.6)
+ax.set_xlabel("Importance (fraction)")
+ax.set_ylabel("")
+ax.set_title("Random Forest — Top Features")
+
+# wrap labels
+wrapped = ["\n".join(textwrap.wrap(lbl, WRAP_CHARS)) for lbl in fi["feature"]]
+ax.set_yticklabels(wrapped, fontsize=10)
+
+# annotate percents
+for p, val in zip(ax.patches, fi["importance"].to_numpy()):
+    width = p.get_width()
+    ax.text(width + 0.005, p.get_y() + p.get_height()/2,
+            f"{100.0*val:,.1f}%", va="center", fontsize=10)
+
+plt.subplots_adjust(left=0.36)
+plt.tight_layout()
+plt.savefig(OUTPUT_DIR / "rf_feature_importance.png", dpi=300, bbox_inches="tight")
+plt.show()
+print("Saved:", OUTPUT_DIR / "rf_feature_importance.png")
 ```
-
-### Overall Synthesis
-Across models, the evidence is consistent: required **experience** and the **baseline salary field** are the strongest drivers of posted wages, with specialized occupation categories and employer identifiers adding secondary nuance. Linear models (GLR and plain OLS) not only achieved the lowest error (RMSE ≈ 8,074, R² ≈ 0.95) but also provided interpretable coefficients that confirm domain intuition. The polynomial model failed to improve fit, suggesting limited curvature in the experience–salary relationship, while Random Forest, though less accurate, reinforced the primacy of salary floors and experience in predictive splits. Together, these diagnostics suggest that parsimonious linear models suffice for this dataset, with occupation and employer effects offering refinements rather than fundamentally altering salary predictions. Caveat: `SALARY_FROM` is a salary component and can act as a proxy for the target; excluding it would test model robustness when such a floor isn’t available at scoring time.
-
-
-#### Submission Notes
-Artifacts saved to `_output/`:
-- `metrics_table.csv` — consolidated model comparison  
-- `actual_vs_pred_2x2.png` — diagnostic fit by model  
-- `rf_feature_importance.png` — top features for non-linear model  
-- `glr_coefficients_ci.png` — interpretable linear effects
-
-Reproducibility: fixed random seed, explicit feature pipeline, and notebook set to `execute.eval: true` for render.
-
 
