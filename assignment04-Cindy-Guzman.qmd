@@ -619,4 +619,5 @@ plt.savefig(OUTPUT_DIR / "rf_feature_importance.png", dpi=300, bbox_inches="tigh
 plt.show()
 print("Saved:", OUTPUT_DIR / "rf_feature_importance.png")
 ```
+>Interpretation (RF Importances). Random Forest also ranks Salary Floor and experience as the dominant predictors, with company and occupation dummies adding modest incremental lift. This mirrors the linear models and suggests the main structure is additive, with limited non-linear gains from tree splits.
 
