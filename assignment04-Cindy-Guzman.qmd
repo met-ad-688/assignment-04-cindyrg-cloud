@@ -446,6 +446,7 @@ plt.savefig(OUTPUT_DIR / "actual_vs_pred_2x2.png", dpi=300, bbox_inches="tight")
 plt.show()
 print("Saved:", OUTPUT_DIR / "actual_vs_pred_2x2.png")
 ```
+>Interpretation (Model Comparison). All three models achieve similar predictive accuracy, with GLR and Random Forest showing the lowest RMSE and comparable R². The consistency across models implies the salary–experience–company relationship is largely linear, with minimal non-linear or interaction effects captured by the Random Forest.
 
 ```{python}
 # GLR coefficients with CI — presentation-ready (top-|t|, clean labels)
