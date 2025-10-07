@@ -105,7 +105,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="executive-abstract" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="executive-abstract"><span class="header-section-number">1</span> Executive Abstract</h2>
 <p>This project builds and evaluates salary prediction models on Lightcast job-posting data. After enforcing sanity filters (positive salaries; non-negative experience), categorical fields were encoded and assembled for modeling. We trained four regressors—Generalized Linear Regression (GLR), Linear Regression, Polynomial Regression (quadratic in <code>MIN_YEARS_EXPERIENCE</code>), and Random Forest—and report test RMSE/MAE/R², along with coefficient/t-value summaries for interpretability. Artifacts are saved under <code>_output/</code>.</p>
-<div id="79b419a8" class="cell" data-execution_count="1">
+<div id="a18d15d4" class="cell" data-execution_count="1">
 <div class="cell-output cell-output-stdout">
 <pre><code>Requirement already satisfied: kaleido in ./.venv/lib/python3.12/site-packages (1.1.0)
 Requirement already satisfied: choreographer&gt;=1.0.10 in ./.venv/lib/python3.12/site-packages (from kaleido) (1.1.1)
@@ -117,23 +117,13 @@ Requirement already satisfied: simplejson&gt;=3.19.3 in ./.venv/lib/python3.12/s
 Requirement already satisfied: pytest&gt;=7.0.0 in ./.venv/lib/python3.12/site-packages (from pytest-timeout&gt;=2.4.0-&gt;kaleido) (8.4.2)
 Requirement already satisfied: iniconfig&gt;=1 in ./.venv/lib/python3.12/site-packages (from pytest&gt;=7.0.0-&gt;pytest-timeout&gt;=2.4.0-&gt;kaleido) (2.1.0)
 Requirement already satisfied: pluggy&lt;2,&gt;=1.5 in ./.venv/lib/python3.12/site-packages (from pytest&gt;=7.0.0-&gt;pytest-timeout&gt;=2.4.0-&gt;kaleido) (1.6.0)
-Requirement already satisfied: pygments&gt;=2.7.2 in ./.venv/lib/python3.12/site-packages (from pytest&gt;=7.0.0-&gt;pytest-timeout&gt;=2.4.0-&gt;kaleido) (2.19.2)</code></pre>
+Requirement already satisfied: pygments&gt;=2.7.2 in ./.venv/lib/python3.12/site-packages (from pytest&gt;=7.0.0-&gt;pytest-timeout&gt;=2.4.0-&gt;kaleido) (2.19.2)
+[OK] Environment initialized</code></pre>
 </div>
+</div>
+<div id="ca93666b" class="cell" data-execution_count="2">
 <div class="cell-output cell-output-stderr">
-<pre><code>WARNING: Using incubator modules: jdk.incubator.vector
-Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
-Setting default log level to "WARN".
-To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
-25/10/07 00:51:49 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-25/10/07 00:51:51 WARN Utils: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[OK] Environment initialized</code></pre>
-</div>
-</div>
-<div id="81d2cfe5" class="cell" data-execution_count="2">
-<div class="cell-output cell-output-stderr">
-<pre><code>[Stage 1:&gt;                                                          (0 + 1) / 1]                                                                                [Stage 2:&gt;                                                          (0 + 1) / 1]</code></pre>
+<pre><code>[Stage 93:&gt;                                                         (0 + 1) / 1]                                                                                [Stage 94:&gt;                                                         (0 + 1) / 1]</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[OK] Cleaned rows: 2243
@@ -145,9 +135,9 @@ To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLeve
 <pre><code>                                                                                </code></pre>
 </div>
 </div>
-<div id="c004a176" class="cell" data-execution_count="3">
+<div id="a7c97f78" class="cell" data-execution_count="3">
 <div class="cell-output cell-output-stderr">
-<pre><code>[Stage 5:&gt;                                                          (0 + 1) / 1]                                                                                [Stage 11:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:52:24 WARN SparkStringUtils: Truncated the string representation of a plan since it was too large. This behavior can be adjusted by setting 'spark.sql.debug.maxToStringFields'.</code></pre>
+<pre><code>[Stage 97:&gt;                                                         (0 + 1) / 1]                                                                                [Stage 103:&gt;                                                        (0 + 1) / 1]                                                                                </code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[OK] Pipeline fit complete
@@ -163,14 +153,14 @@ To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLeve
 only showing top 5 rows</code></pre>
 </div>
 </div>
-<div id="4e0ca497" class="cell" data-execution_count="4">
+<div id="2ac628d2" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-stdout">
 <pre><code>[OK] Pruned final_df columns: ['row_id', 'label', 'features', 'features_poly', 'MIN_YEARS_EXPERIENCE', 'MAX_YEARS_EXPERIENCE', 'DURATION', 'SALARY_FROM']</code></pre>
 </div>
 </div>
-<div id="6fec7439" class="cell" data-execution_count="5">
+<div id="4350af26" class="cell" data-execution_count="5">
 <div class="cell-output cell-output-stderr">
-<pre><code>[Stage 18:&gt;                                                         (0 + 1) / 1][Stage 18:==========================================================(1 + 0) / 1]                                                                                [Stage 21:&gt;                                                         (0 + 1) / 1]</code></pre>
+<pre><code>[Stage 110:&gt;                                                        (0 + 1) / 1]                                                                                [Stage 113:&gt;                                                        (0 + 1) / 1]</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[OK] Split sizes: 1848 395</code></pre>
@@ -182,122 +172,122 @@ only showing top 5 rows</code></pre>
 <blockquote class="blockquote">
 <p>An 80/20 train–test split was used, this is a standard ratio for tabular regression data. It balances bias and variance by keeping sufficient training data while holding back a meaningful test sample for performance validation.</p>
 </blockquote>
-<div id="0ef4dea3" class="cell" data-execution_count="6">
+<div id="82a110e6" class="cell" data-execution_count="6">
 <div class="cell-output cell-output-stderr">
-<pre><code>25/10/07 00:52:38 WARN Instrumentation: [bd1f5eba] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 24:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:52:43 WARN Instrumentation: [bd1f5eba] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:52:46 WARN Instrumentation: [f42a5d80] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 25:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:52:51 WARN Instrumentation: [f42a5d80] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-[Stage 26:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:52:59 WARN Instrumentation: [9831eff1] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 27:&gt;                                                         (0 + 1) / 1]                                                                                [Stage 28:&gt;                                                         (0 + 1) / 1]                                                                                [Stage 29:&gt;                                                         (0 + 1) / 1]                                                                                [Stage 30:&gt;                                                         (0 + 1) / 1]                                                                                [Stage 31:&gt;                                                         (0 + 1) / 1]                                                                                [Stage 33:&gt;                                                         (0 + 1) / 1]                                                                                [Stage 35:&gt;                                                         (0 + 1) / 1][Stage 36:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:53:33 WARN DAGScheduler: Broadcasting large task binary with size 1258.5 KiB
-[Stage 37:&gt;                                                         (0 + 1) / 1][Stage 38:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:53:35 WARN DAGScheduler: Broadcasting large task binary with size 2.0 MiB
-[Stage 39:&gt;                                                         (0 + 1) / 1][Stage 40:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:53:38 WARN DAGScheduler: Broadcasting large task binary with size 3.2 MiB
-[Stage 41:&gt;                                                         (0 + 1) / 1][Stage 42:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:53:42 WARN DAGScheduler: Broadcasting large task binary with size 4.7 MiB
-[Stage 43:&gt;                                                         (0 + 1) / 1][Stage 44:&gt;                                                         (0 + 1) / 1]                                                                                </code></pre>
+<pre><code>25/10/07 01:01:51 WARN Instrumentation: [45784a35] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 116:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:01:55 WARN Instrumentation: [45784a35] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:01:56 WARN Instrumentation: [570296d9] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 117:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:02:00 WARN Instrumentation: [570296d9] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+[Stage 118:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:02:05 WARN Instrumentation: [10366c66] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 119:&gt;                                                        (0 + 1) / 1]                                                                                [Stage 120:&gt;                                                        (0 + 1) / 1]                                                                                [Stage 121:&gt;                                                        (0 + 1) / 1]                                                                                [Stage 122:&gt;                                                        (0 + 1) / 1]                                                                                [Stage 123:&gt;                                                        (0 + 1) / 1]                                                                                [Stage 125:&gt;                                                        (0 + 1) / 1][Stage 126:&gt;                                                        (0 + 1) / 1]                                                                                [Stage 127:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:02:34 WARN DAGScheduler: Broadcasting large task binary with size 1258.5 KiB
+[Stage 129:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:02:36 WARN DAGScheduler: Broadcasting large task binary with size 2.0 MiB
+[Stage 131:&gt;                                                        (0 + 1) / 1][Stage 132:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:02:38 WARN DAGScheduler: Broadcasting large task binary with size 3.2 MiB
+[Stage 133:&gt;                                                        (0 + 1) / 1][Stage 134:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:02:42 WARN DAGScheduler: Broadcasting large task binary with size 4.7 MiB
+[Stage 135:&gt;                                                        (0 + 1) / 1][Stage 136:&gt;                                                        (0 + 1) / 1]                                                                                </code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[OK] All models trained</code></pre>
 </div>
 </div>
-<div id="2e123bd1" class="cell" data-execution_count="7">
+<div id="f3f4ea2f" class="cell" data-execution_count="7">
 <div class="cell-output cell-output-stdout">
 <pre><code>[OK] Expanded feature count = 846</code></pre>
 </div>
 </div>
-<div id="9513ea3d" class="cell" data-execution_count="8">
+<div id="9a2a412c" class="cell" data-execution_count="8">
 <div class="cell-output cell-output-stdout">
 <pre><code>[warn] Spark did not provide SE/t/p; estimating via bootstrap...</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>25/10/07 00:53:48 WARN Instrumentation: [e77baff3] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 45:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:53:54 WARN Instrumentation: [e77baff3] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:53:55 WARN Instrumentation: [ecdf7deb] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 46:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:54:00 WARN Instrumentation: [ecdf7deb] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:54:01 WARN Instrumentation: [ef923b80] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 47:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:54:07 WARN Instrumentation: [ef923b80] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:54:08 WARN Instrumentation: [32944d71] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 48:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:54:13 WARN Instrumentation: [32944d71] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:54:14 WARN Instrumentation: [33ed7a5f] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 49:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:54:20 WARN Instrumentation: [33ed7a5f] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:54:21 WARN Instrumentation: [66ea6d3d] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 50:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:54:25 WARN Instrumentation: [66ea6d3d] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:54:26 WARN Instrumentation: [2646a5a0] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 51:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:54:31 WARN Instrumentation: [2646a5a0] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:54:32 WARN Instrumentation: [685f6444] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 52:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:54:37 WARN Instrumentation: [685f6444] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:54:38 WARN Instrumentation: [562b6b33] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 53:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:54:43 WARN Instrumentation: [562b6b33] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:54:44 WARN Instrumentation: [cb0faef2] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 54:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:54:49 WARN Instrumentation: [cb0faef2] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:54:50 WARN Instrumentation: [d092cb43] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 55:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:54:55 WARN Instrumentation: [d092cb43] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:54:56 WARN Instrumentation: [f4a8b153] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 56:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:55:00 WARN Instrumentation: [f4a8b153] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:55:01 WARN Instrumentation: [87219dea] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 57:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:55:06 WARN Instrumentation: [87219dea] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:55:06 WARN Instrumentation: [88aa1d9c] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 58:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:55:12 WARN Instrumentation: [88aa1d9c] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:55:13 WARN Instrumentation: [1ac35fdf] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 59:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:55:18 WARN Instrumentation: [1ac35fdf] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:55:18 WARN Instrumentation: [639161d8] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 60:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:55:24 WARN Instrumentation: [639161d8] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:55:25 WARN Instrumentation: [7337cb08] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 61:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:55:30 WARN Instrumentation: [7337cb08] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:55:30 WARN Instrumentation: [203c709e] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 62:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:55:35 WARN Instrumentation: [203c709e] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:55:36 WARN Instrumentation: [ba228084] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 63:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:55:41 WARN Instrumentation: [ba228084] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:55:42 WARN Instrumentation: [a9ea5cec] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 64:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:55:47 WARN Instrumentation: [a9ea5cec] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:55:47 WARN Instrumentation: [d6dab32b] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 65:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:55:52 WARN Instrumentation: [d6dab32b] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:55:52 WARN Instrumentation: [042fc583] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 66:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:55:58 WARN Instrumentation: [042fc583] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:55:58 WARN Instrumentation: [6731b52d] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 67:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:56:04 WARN Instrumentation: [6731b52d] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:56:04 WARN Instrumentation: [a8eb8e89] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 68:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:56:09 WARN Instrumentation: [a8eb8e89] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:56:10 WARN Instrumentation: [6fef27dc] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 69:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:56:15 WARN Instrumentation: [6fef27dc] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:56:15 WARN Instrumentation: [194093cd] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 70:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:56:21 WARN Instrumentation: [194093cd] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:56:21 WARN Instrumentation: [9873b120] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 71:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:56:26 WARN Instrumentation: [9873b120] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:56:27 WARN Instrumentation: [6a0d3dc0] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 72:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:56:32 WARN Instrumentation: [6a0d3dc0] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:56:33 WARN Instrumentation: [49f4e317] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 73:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:56:37 WARN Instrumentation: [49f4e317] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:56:38 WARN Instrumentation: [7375a924] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 74:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:56:43 WARN Instrumentation: [7375a924] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:56:44 WARN Instrumentation: [03b47247] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 75:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:56:49 WARN Instrumentation: [03b47247] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:56:50 WARN Instrumentation: [8d98c12a] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 76:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:56:55 WARN Instrumentation: [8d98c12a] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:56:55 WARN Instrumentation: [4d29888c] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 77:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:57:00 WARN Instrumentation: [4d29888c] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:57:01 WARN Instrumentation: [db62dc1b] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 78:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:57:05 WARN Instrumentation: [db62dc1b] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:57:06 WARN Instrumentation: [c6dc060d] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 79:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:57:11 WARN Instrumentation: [c6dc060d] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:57:12 WARN Instrumentation: [d34fc8f0] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 80:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:57:17 WARN Instrumentation: [d34fc8f0] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:57:17 WARN Instrumentation: [d05849c8] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 81:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:57:23 WARN Instrumentation: [d05849c8] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:57:23 WARN Instrumentation: [d0e2f6a4] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 82:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:57:29 WARN Instrumentation: [d0e2f6a4] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:57:29 WARN Instrumentation: [6d85c0a8] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 83:&gt;                                                         (0 + 1) / 1]                                                                                25/10/07 00:57:34 WARN Instrumentation: [6d85c0a8] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
-25/10/07 00:57:34 WARN Instrumentation: [833b4142] regParam is zero, which might cause numerical instability and overfitting.
-[Stage 84:&gt;                                                         (0 + 1) / 1]</code></pre>
+<pre><code>25/10/07 01:02:47 WARN Instrumentation: [5c2b4ae6] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 137:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:02:53 WARN Instrumentation: [5c2b4ae6] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:02:53 WARN Instrumentation: [21bac3a6] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 138:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:02:58 WARN Instrumentation: [21bac3a6] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:02:59 WARN Instrumentation: [910f4803] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 139:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:03:04 WARN Instrumentation: [910f4803] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:03:05 WARN Instrumentation: [815c21eb] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 140:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:03:10 WARN Instrumentation: [815c21eb] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:03:10 WARN Instrumentation: [b9f3a3b1] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 141:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:03:16 WARN Instrumentation: [b9f3a3b1] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:03:16 WARN Instrumentation: [d7ab533b] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 142:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:03:22 WARN Instrumentation: [d7ab533b] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:03:22 WARN Instrumentation: [d9df0583] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 143:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:03:27 WARN Instrumentation: [d9df0583] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:03:27 WARN Instrumentation: [680a6b18] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 144:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:03:33 WARN Instrumentation: [680a6b18] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:03:33 WARN Instrumentation: [241a2b2a] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 145:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:03:38 WARN Instrumentation: [241a2b2a] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:03:39 WARN Instrumentation: [a1a1aa98] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 146:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:03:44 WARN Instrumentation: [a1a1aa98] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:03:45 WARN Instrumentation: [405cb6b6] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 147:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:03:50 WARN Instrumentation: [405cb6b6] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:03:51 WARN Instrumentation: [0063a8df] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 148:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:03:56 WARN Instrumentation: [0063a8df] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:03:56 WARN Instrumentation: [3376e950] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 149:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:04:01 WARN Instrumentation: [3376e950] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:04:02 WARN Instrumentation: [02c743c3] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 150:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:04:06 WARN Instrumentation: [02c743c3] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:04:07 WARN Instrumentation: [3024b2be] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 151:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:04:12 WARN Instrumentation: [3024b2be] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:04:13 WARN Instrumentation: [ab55fab0] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 152:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:04:18 WARN Instrumentation: [ab55fab0] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:04:18 WARN Instrumentation: [17398964] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 153:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:04:24 WARN Instrumentation: [17398964] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:04:24 WARN Instrumentation: [84ca5d31] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 154:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:04:28 WARN Instrumentation: [84ca5d31] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:04:29 WARN Instrumentation: [96670fd6] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 155:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:04:34 WARN Instrumentation: [96670fd6] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:04:35 WARN Instrumentation: [5a6ddfd6] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 156:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:04:40 WARN Instrumentation: [5a6ddfd6] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:04:40 WARN Instrumentation: [755dab59] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 157:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:04:46 WARN Instrumentation: [755dab59] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:04:46 WARN Instrumentation: [ac963eb3] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 158:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:04:51 WARN Instrumentation: [ac963eb3] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:04:51 WARN Instrumentation: [4a9596f9] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 159:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:04:56 WARN Instrumentation: [4a9596f9] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:04:57 WARN Instrumentation: [733e2e18] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 160:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:05:02 WARN Instrumentation: [733e2e18] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:05:02 WARN Instrumentation: [5b81237f] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 161:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:05:07 WARN Instrumentation: [5b81237f] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:05:08 WARN Instrumentation: [cc9f4391] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 162:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:05:12 WARN Instrumentation: [cc9f4391] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:05:12 WARN Instrumentation: [2feda97b] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 163:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:05:17 WARN Instrumentation: [2feda97b] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:05:17 WARN Instrumentation: [5c1454af] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 164:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:05:23 WARN Instrumentation: [5c1454af] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:05:23 WARN Instrumentation: [219f5780] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 165:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:05:28 WARN Instrumentation: [219f5780] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:05:29 WARN Instrumentation: [00e21f33] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 166:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:05:34 WARN Instrumentation: [00e21f33] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:05:34 WARN Instrumentation: [9257a983] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 167:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:05:39 WARN Instrumentation: [9257a983] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:05:40 WARN Instrumentation: [238c0463] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 168:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:05:45 WARN Instrumentation: [238c0463] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:05:45 WARN Instrumentation: [9ebe0be8] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 169:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:05:51 WARN Instrumentation: [9ebe0be8] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:05:51 WARN Instrumentation: [b6f76516] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 170:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:05:56 WARN Instrumentation: [b6f76516] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:05:57 WARN Instrumentation: [8f051e49] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 171:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:06:02 WARN Instrumentation: [8f051e49] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:06:02 WARN Instrumentation: [236eacdd] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 172:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:06:07 WARN Instrumentation: [236eacdd] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:06:08 WARN Instrumentation: [90e629a7] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 173:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:06:13 WARN Instrumentation: [90e629a7] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:06:13 WARN Instrumentation: [d6a2897b] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 174:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:06:19 WARN Instrumentation: [d6a2897b] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:06:19 WARN Instrumentation: [3bc33d75] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 175:&gt;                                                        (0 + 1) / 1]                                                                                25/10/07 01:06:24 WARN Instrumentation: [3bc33d75] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.
+25/10/07 01:06:24 WARN Instrumentation: [3c95b081] regParam is zero, which might cause numerical instability and overfitting.
+[Stage 176:&gt;                                                        (0 + 1) / 1]</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Saved: _output/glr_summary.csv</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>                                                                                25/10/07 00:57:40 WARN Instrumentation: [833b4142] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.</code></pre>
+<pre><code>                                                                                25/10/07 01:06:29 WARN Instrumentation: [3c95b081] Cholesky solver failed due to singular covariance matrix. Retrying with Quasi-Newton solver.</code></pre>
 </div>
 </div>
-<div id="b4f4c226" class="cell" data-execution_count="9">
+<div id="3c2e2d74" class="cell" data-execution_count="9">
 <div class="cell-output cell-output-stdout">
 <pre><code>Saved: _output/polylr_summary.csv</code></pre>
 </div>
@@ -305,15 +295,15 @@ only showing top 5 rows</code></pre>
 <blockquote class="blockquote">
 <p>Interpretation (Polynomial LR). Adding a quadratic term in Min Yrs Exp does not improve generalization in this dataset; the linear term carries most of the signal. The small or non-significant t-value for the squared term suggests added variance with limited predictive value.</p>
 </blockquote>
-<div id="bce84d94" class="cell" data-execution_count="10">
+<div id="ab7e264c" class="cell" data-execution_count="10">
 <div class="cell-output cell-output-stdout">
 <pre><code>Saved: glr_significant/top_positive_t/top_negative_t
 Saved: poly_significant/top_positive_t/top_negative_t</code></pre>
 </div>
 </div>
-<div id="a64bf5f1" class="cell" data-execution_count="11">
+<div id="691383d7" class="cell" data-execution_count="11">
 <div class="cell-output cell-output-stderr">
-<pre><code>[Stage 85:&gt;   (0 + 1) / 1][Stage 86:&gt;   (0 + 1) / 1][Stage 87:&gt;   (0 + 0) / 1]                                                                                [Stage 87:&gt;                                                         (0 + 1) / 1]                                                                                [Stage 88:&gt;                                                         (0 + 1) / 1]                                                                                [Stage 89:&gt;                                                         (0 + 1) / 1]</code></pre>
+<pre><code>[Stage 177:&gt;                                                        (0 + 1) / 1][Stage 177:&gt;  (0 + 1) / 1][Stage 178:&gt;  (0 + 1) / 1][Stage 179:&gt;  (0 + 0) / 1]                                                                                [Stage 179:&gt;                                                        (0 + 1) / 1]                                                                                [Stage 180:&gt;                                                        (0 + 1) / 1]                                                                                [Stage 181:&gt;                                                        (0 + 1) / 1]</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Saved: _output/metrics_table.csv
@@ -322,7 +312,7 @@ Saved: _output/predictions_clean.csv</code></pre>
 <div class="cell-output cell-output-stderr">
 <pre><code>                                                                                </code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="11">
+<div class="cell-output cell-output-display" data-execution_count="25">
 <div>
 
 
@@ -386,7 +376,7 @@ Saved: _output/predictions_clean.csv</code></pre>
 </div>
 </div>
 </div>
-<div id="4bcd6fea" class="cell" data-execution_count="12">
+<div id="58b293e8" class="cell" data-execution_count="12">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -401,7 +391,7 @@ Saved: _output/predictions_clean.csv</code></pre>
 <blockquote class="blockquote">
 <p>Interpretation (Model Comparison). All three models achieve similar predictive accuracy, with GLR and Random Forest showing the lowest RMSE and comparable R². The consistency across models implies the salary–experience–company relationship is largely linear, with minimal non-linear or interaction effects captured by the Random Forest.</p>
 </blockquote>
-<div id="fefdca84" class="cell" data-execution_count="13">
+<div id="be6c1588" class="cell" data-execution_count="13">
 <div class="cell-output cell-output-display">
 <pre><code>Unable to display output for mime type(s): application/vnd.plotly.v1+json</code></pre>
 </div>
@@ -412,7 +402,7 @@ Saved: _output/predictions_clean.csv</code></pre>
 <blockquote class="blockquote">
 <p>Interpretation (GLR). Experience and the Salary Floor variable show the strongest positive association with salary, while several company/occupation levels contribute smaller adjustments around that baseline. Narrow confidence intervals and large absolute t-values indicate stable effects for the main drivers; wide intervals flag sparse categories where estimates are less certain.</p>
 </blockquote>
-<div id="bb435154" class="cell" data-execution_count="14">
+<div id="c86b0f2a" class="cell" data-execution_count="14">
 <div class="cell-output cell-output-stderr">
 <pre><code>/tmp/ipykernel_9706/1653157756.py:74: UserWarning:
 
