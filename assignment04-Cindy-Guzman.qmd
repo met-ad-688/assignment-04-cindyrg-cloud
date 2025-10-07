@@ -321,6 +321,7 @@ poly_df["CI_upper"] = poly_df["coefficient"] + 1.96*poly_df["std_error"]
 poly_df.to_csv(OUTPUT_DIR / "polylr_summary.csv", index=False)
 print("Saved:", OUTPUT_DIR / "polylr_summary.csv")
 ```
+>Interpretation (Polynomial LR). Adding a quadratic term in Min Yrs Exp does not improve generalization in this dataset; the linear term carries most of the signal. The small or non-significant t-value for the squared term suggests added variance with limited predictive value.
 
 ```{python}
 # T-values significance and top drivers
