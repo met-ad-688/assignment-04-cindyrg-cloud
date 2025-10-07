@@ -176,6 +176,8 @@ print("[OK] Pruned final_df columns:", final_df.columns)
 # Train and Split
 train_df, test_df = final_df.randomSplit([0.8, 0.2], seed=42)
 print("[OK] Split sizes:", train_df.count(), test_df.count())
+
+> An 80/20 train–test split was used, this is a standard ratio for tabular regression data. It balances bias and variance by keeping sufficient training data while holding back a meaningful test sample for performance validation.
 ```
 
 ```{python}
