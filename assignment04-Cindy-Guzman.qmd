@@ -176,9 +176,9 @@ print("[OK] Pruned final_df columns:", final_df.columns)
 # Train and Split
 train_df, test_df = final_df.randomSplit([0.8, 0.2], seed=42)
 print("[OK] Split sizes:", train_df.count(), test_df.count())
-
-> An 80/20 train–test split was used, this is a standard ratio for tabular regression data. It balances bias and variance by keeping sufficient training data while holding back a meaningful test sample for performance validation.
 ```
+> An 80/20 train–test split was used, this is a standard ratio for tabular regression data. It balances bias and variance by keeping sufficient training data while holding back a meaningful test sample for performance validation.
+
 
 ```{python}
 # GLR (Gaussian / Identity)
@@ -527,6 +527,8 @@ pio.write_image(fig_coef, str(OUTPUT_DIR / "glr_coefficients_ci.png"), scale=2)
 pio.write_html(fig_coef, str(OUTPUT_DIR / "glr_coefficients_ci.html"), include_plotlyjs="cdn")
 print("Saved:", OUTPUT_DIR / "glr_coefficients_ci.png")
 ```
+>Interpretation (GLR). Experience and the Salary Floor variable show the strongest positive association with salary, while several company/occupation levels contribute smaller adjustments around that baseline. Narrow confidence intervals and large absolute t-values indicate stable effects for the main drivers; wide intervals flag sparse categories where estimates are less certain.
+
 
 ```{python}
 # Random Forest — Top Features (presentation-ready labels + annotations, Seaborn)
