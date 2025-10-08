@@ -473,17 +473,14 @@ print("Saved:", OUTPUT_DIR / "actual_vs_pred_2x2.png")
 >Interpretation of Model Comparison. All four models achieve similar predictive and performance accuracy. GLR and Random Forest show the lowest RMSE and comparable R². Essentially what this tells us is that the salary grows at a steady pace with experience and company type, without any drastic curves or complex variable interactions.
 
 ```{python}
-#| echo: false
-#| message: false
-#| warning: false
-#| results: hold
-
 # GLR coefficients with CI 
-import pandas as pd, textwrap
+import os, textwrap
+import numpy as np, pandas as pd
+from IPython.display import Image, display
+from pathlib import Path
 from pyspark.ml.feature import StringIndexerModel
 import plotly.express as px
 import plotly.io as pio
-from IPython.display import Image, display
 
 TOP_N = 25         # show top 25 effects by |t|
 WRAP_CHARS = 36    # wrap long labels for readability
@@ -536,9 +533,7 @@ else:
     plot_df = plot_df.assign(abs_c=plot_df["coefficient"].abs()).sort_values("abs_c", ascending=False)
 
 plot_df = plot_df.head(TOP_N).sort_values("coefficient")  # plot from negative to positive
-
-# wrap labels
-plot_df["pretty_wrapped"] = plot_df["pretty"].apply(lambda s: "<br>".join(textwrap.wrap(s, WRAP_CHARS)))
+plot_df["pretty_wrapped"] = plot_df["pretty"].apply(lambda s: "<br>".join(textwrap.wrap(s, WRAP_CHARS)))  # wrap labels
 
 fig_coef = px.bar(
     plot_df,
@@ -555,20 +550,23 @@ fig_coef.update_layout(
 )
 fig_coef.update_traces(hovertemplate="<b>%{y}</b><br>Coef=%{x:.2f}<extra></extra>")
 
+OUTPUT_DIR = Path("_output")
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
 # Save static + html
 png_path = OUTPUT_DIR / "glr_coefficients_ci.png"
 html_path = OUTPUT_DIR / "glr_coefficients_ci.html"
-pio.write_image(fig_coef, str(png_path), scale=2)
+
 pio.write_html(fig_coef, str(html_path), include_plotlyjs="cdn")
 
-# Show PNG in DOCX/PDF; interactive in HTML
-fmt = os.environ.get("QUARTO_OUTPUT_FORMAT", "").lower()
-if ("docx" in fmt) or ("pdf" in fmt):
-    # Do NOT call fig_coef.show(); show static image instead
-    display(Image(filename=str(png_path)))
-else:
-    # HTML render: show interactive
-    fig_coef
+pio.write_image(fig_coef, str(png_path), scale=2)
+
+assert png_path.exists() and png_path.stat().st_size > 0, (
+    "Failed to create _output/glr_coefficients_ci.png. "
+    "Make sure kaleido is installed in the Quarto Python environment."
+)
+
+display(Image(filename=str(png_path)))
 ```
 >Interpretation of GLR. The model shows that experience and the salary floor variable have the strongest positive correlation with salary, while several company/occupation levels contribute smaller adjustments around that baseline. Narrow confidence intervals and large absolute t-values show stable effects for the main drivers. While, wide intervals flag sparse categories where there is less certainity in these estimates.
 
