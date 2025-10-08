@@ -23,7 +23,7 @@ execute:
 ---
 
 ## Abstract
-This assignment focuses on building and evaluating salary prediction models using Lightcast job-posting data. After enforcing filters (positive salaries; non-negative experience), categorical fields were encoded and assembled for modeling. Four regressors were trained—Generalized Linear Regression (GLR), Linear Regression, Polynomial Regression (quadratic in `MIN_YEARS_EXPERIENCE`), and Random Forest—and report test RMSE/MAE/R², in addition to coefficient/t-value summaries for interpretability. Data is saved under `_output/`.
+Assignment 04 focuses on building and evaluating salary prediction models using Lightcast job-posting data. After enforcing filters (positive salaries; non-negative experience), categorical fields were encoded and assembled for modeling. Four regressors were trained—Generalized Linear Regression (GLR), Linear Regression, Polynomial Regression (quadratic in `MIN_YEARS_EXPERIENCE`), and Random Forest—and report test RMSE/MAE/R², in addition to coefficient/t-value summaries for interpretability. Data is saved under `_output/`.
 
 ```{python}
 # --- Setup ---
@@ -79,7 +79,7 @@ y_col = next((c for c in candidate_y if c in df.columns), None)
 if y_col is None:
     raise ValueError(f"None of {candidate_y} found. Available: {df.columns}")
 
-# Enforce assignment requirement: use SALARY if present
+# Use SALARY if present
 if "SALARY" in df.columns:
     y_col = "SALARY"
 
@@ -118,7 +118,7 @@ df_clean = (
 ```
 
 ```{python}
-# Index + OneHot
+# Indexing + OneHot Encoder
 indexers = [
     StringIndexer(inputCol=c, outputCol=f"{c}_idx",
                   handleInvalid="keep", stringOrderType="frequencyDesc")
@@ -140,7 +140,7 @@ add_label = SQLTransformer(
     statement=f"SELECT *, CAST({y_col} AS DOUBLE) AS label FROM __THIS__"
 )
 
-# Assemblers: linear features & polynomial-only features
+# Feature Selection and Vectorization of Features
 feature_cols = cont_cols + [min_years] + [f"{c}_ohe" for c in cat_cols]
 assembler = VectorAssembler(inputCols=feature_cols, outputCol="features")
 
@@ -220,7 +220,7 @@ print(f"[OK] Expanded feature count = {len(expanded_features)}")
 ```
 
 ```{python}
-# Try native SE/t/p; if not present, bootstrap-estimate SE/t/p
+# Try native SE/t/p; if not present, bootstrap-estimate SE/t/p (SE = standard errors, t = t-statistics, p = p-values)
 coefs = np.array(glr_model.coefficients.toArray(), dtype=float)
 
 def norm_cdf(z): 
@@ -253,7 +253,7 @@ if not use_native:
     else:
         se = np.full_like(coefs, np.nan); tval = np.full_like(coefs, np.nan); pval = np.full_like(coefs, np.nan)
 
-# Align to names (defensive)
+# Align to names to ensure df can be built 
 L = min(len(coefs), len(expanded_features), len(se), len(tval), len(pval))
 glr_df = pd.DataFrame({
     "feature": expanded_features[:L],
@@ -276,7 +276,7 @@ glr_df = pd.concat([glr_df, pd.DataFrame([{
     "p_value": int_pv
 }])], ignore_index=True)
 
-# 95% CI
+# 95% Confidence Interval
 glr_df["CI_lower"] = glr_df["coefficient"] - 1.96*glr_df["std_error"]
 glr_df["CI_upper"] = glr_df["coefficient"] + 1.96*glr_df["std_error"]
 
@@ -285,7 +285,7 @@ print("Saved:", OUTPUT_DIR / "glr_summary.csv")
 ```
 
 ```{python}
-# Polynomial LR Summary (t-values, CI)
+# Polynomial Linear Regression Summary 
 poly_names = [min_years, f"{min_years}_SQ"]
 
 lr_summ = poly_model.summary
@@ -321,11 +321,11 @@ poly_df["CI_upper"] = poly_df["coefficient"] + 1.96*poly_df["std_error"]
 poly_df.to_csv(OUTPUT_DIR / "polylr_summary.csv", index=False)
 print("Saved:", OUTPUT_DIR / "polylr_summary.csv")
 ```
->Interpretation (Polynomial LR). Adding a quadratic term in Min Yrs Exp does not improve generalization in this dataset; the linear term carries most of the signal. The small or non-significant t-value for the squared term suggests added variance with limited predictive value.
+>Interpretation of Polynomial Linear Regression. Adding a quadratic term in Min Yrs Exp does not improve generalization for this dataset. The linear term carries most of the signal, the smaller or non-significant t-value for the squared term is suggesting added variance with a limited predictive value.
 
 ```{python}
 # T-values significance and top drivers
-ALPHA_T = 1.96  # ~ two-sided 5%
+ALPHA_T = 1.96  # quick rule-of-thumb for statistical significance at ~5% (two-sided) under a normal/large-sample approximation
 
 def export_sig_tables(df, prefix):
     df = df.copy()
@@ -346,7 +346,7 @@ export_sig_tables(poly_df, "poly")
 ```
 
 ```{python}
-# Join predictions on row_id, keep a compact table
+# Join predictions on row_id, maintain a compact table
 p_glr = glr_test.select("row_id", F.col("label").alias("label"), F.col("prediction").alias("pred_glr"))
 p_lr  = lr_test.select("row_id", F.col("prediction").alias("pred_lr"))
 p_pr  = poly_test.select("row_id", F.col("prediction").alias("pred_poly"))
@@ -366,7 +366,7 @@ preds = {
     "RandomForest": pdf["pred_rf"].values
 }
 
-# Parameter counts (linear) and a proxy for RF
+# Parameter counts (linear = k = (# coefficients) + 1) and a proxy for RF (k_rf = len(expanded_features) + 1)
 k_glr  = len(glr_model.coefficients) + 1
 k_lr   = len(lr_model.coefficients) + 1
 k_poly = len(poly_model.coefficients) + 1
@@ -391,7 +391,7 @@ for name, yhat in preds.items():
 
 metrics_df = pd.DataFrame(rows)
 
-# === GLR exact log-likelihood & BIC per assignment 7.1 (train summary) ===
+# === GLR exact log-likelihood & BIC ===
 n_glr = int(glr_summary.numInstances)
 disp  = float(glr_summary.dispersion)
 dev   = float(glr_summary.deviance)
@@ -414,7 +414,7 @@ metrics_df
 ```
 
 ```{python}
-# Actual vs Predicted (2x2) — Seaborn
+# Actual vs Predicted
 import seaborn as sns
 sns.set_theme(style="whitegrid")
 
@@ -446,10 +446,10 @@ plt.savefig(OUTPUT_DIR / "actual_vs_pred_2x2.png", dpi=300, bbox_inches="tight")
 plt.show()
 print("Saved:", OUTPUT_DIR / "actual_vs_pred_2x2.png")
 ```
->Interpretation (Model Comparison). All three models achieve similar predictive accuracy, with GLR and Random Forest showing the lowest RMSE and comparable R². The consistency across models implies the salary–experience–company relationship is largely linear, with minimal non-linear or interaction effects captured by the Random Forest.
+>Interpretation of Model Comparison. All four models achieve similar predictive and performance accuracy. GLR and Random Forest show the lowest RMSE and comparable R². Essentially what this tells us is that the salary grows at a steady pace with experience and company type, without any drastic curves or complex variable interactions.
 
 ```{python}
-# GLR coefficients with CI — presentation-ready (top-|t|, clean labels)
+# GLR coefficients with CI 
 import pandas as pd, textwrap
 from pyspark.ml.feature import StringIndexerModel
 import plotly.express as px
@@ -529,11 +529,11 @@ pio.write_image(fig_coef, str(OUTPUT_DIR / "glr_coefficients_ci.png"), scale=2)
 pio.write_html(fig_coef, str(OUTPUT_DIR / "glr_coefficients_ci.html"), include_plotlyjs="cdn")
 print("Saved:", OUTPUT_DIR / "glr_coefficients_ci.png")
 ```
->Interpretation (GLR). Experience and the Salary Floor variable show the strongest positive association with salary, while several company/occupation levels contribute smaller adjustments around that baseline. Narrow confidence intervals and large absolute t-values indicate stable effects for the main drivers; wide intervals flag sparse categories where estimates are less certain.
+>Interpretation of GLR. The model shows that experience and the salary floor variable have the strongest positive correlation with salary, while several company/occupation levels contribute smaller adjustments around that baseline. Narrow confidence intervals and large absolute t-values show stable effects for the main drivers. While, wide intervals flag sparse categories where there is less certainity in these estimates.
 
 
 ```{python}
-# Random Forest — Top Features (presentation-ready labels + annotations, Seaborn)
+# Random Forest 
 import numpy as np, pandas as pd, matplotlib.pyplot as plt, textwrap
 from pyspark.ml.feature import OneHotEncoderModel, StringIndexerModel
 import seaborn as sns
@@ -596,7 +596,7 @@ fi = (
       .sort_values("importance", ascending=True)  # nicer bars bottom-up
 )
 
-# 4) plot (Seaborn to satisfy assignment wording)
+# 4) plot 
 plt.figure(figsize=(11, 6.5))
 ax = sns.barplot(data=fi, y="feature", x="importance", orient="h")
 ax.grid(axis="x", linestyle=":", linewidth=0.7, alpha=0.6)
@@ -620,5 +620,5 @@ plt.savefig(OUTPUT_DIR / "rf_feature_importance.png", dpi=300, bbox_inches="tigh
 plt.show()
 print("Saved:", OUTPUT_DIR / "rf_feature_importance.png")
 ```
->Interpretation (RF Importances). Random Forest also ranks Salary Floor and experience as the dominant predictors, with company and occupation dummies adding modest incremental lift. This mirrors the linear models and suggests the main structure is additive, with limited non-linear gains from tree splits.
+>Interpretation of Random Forest Importances. Random Forest confirms what the linear models above showed, salary floor and experience are the dominant predictors, with company and occupation contributing small tweaks. This suggests the main structure is additive, with limited non-linear gains from tree splits.
 
