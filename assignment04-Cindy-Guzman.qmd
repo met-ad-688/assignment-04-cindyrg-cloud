@@ -16,14 +16,32 @@ format:
     theme: lux
     toc: true
     toc-depth: 2
+    code-fold: show
+docx:
+    toc: true
 execute:
-  echo: false
-  eval: true
+  echo: true
+  warning: false
+  message: false
   freeze: auto
 ---
 
 ## Abstract
 Assignment 04 focuses on building and evaluating salary prediction models using Lightcast job-posting data. After enforcing filters (positive salaries; non-negative experience), categorical fields were encoded and assembled for modeling. Four regressors were trained—Generalized Linear Regression (GLR), Linear Regression, Polynomial Regression (quadratic in `MIN_YEARS_EXPERIENCE`), and Random Forest—and report test RMSE/MAE/R², in addition to coefficient/t-value summaries for interpretability. Data is saved under `_output/`.
+
+```{python}
+#| echo: false
+#| warning: false
+#| message: false
+
+import warnings, os
+warnings.filterwarnings("ignore")  # belt & suspenders
+# If you use Spark, keep logs quiet:
+try:
+    spark.sparkContext.setLogLevel("ERROR")
+except Exception:
+    pass
+```
 
 ```{python}
 # --- Setup ---
@@ -175,7 +193,7 @@ minimal_cols = ["row_id", "label", "features", "features_poly",
                 "MIN_YEARS_EXPERIENCE", "MAX_YEARS_EXPERIENCE", "DURATION", "SALARY_FROM"]
 final_df = full_df.select([c for c in minimal_cols if c in full_df.columns])
 
-print("[OK] Pruned final_df columns:", final_df.columns)
+# print("[OK] Pruned final_df columns:", final_df.columns)
 ```
 
 ```{python}
