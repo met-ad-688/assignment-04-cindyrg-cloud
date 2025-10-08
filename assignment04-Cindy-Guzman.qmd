@@ -1,5 +1,5 @@
 ---
-title: "Assignment 04 - Lightcast Salary Prediction"
+title: "Assignment 04 - Machine Learning on Scale"
 author:
   - name: "Cindy Guzman"
     affiliations:
@@ -22,8 +22,8 @@ execute:
   freeze: auto
 ---
 
-## Executive Abstract
-This project builds and evaluates salary prediction models on Lightcast job-posting data. After enforcing sanity filters (positive salaries; non-negative experience), categorical fields were encoded and assembled for modeling. We trained four regressors—Generalized Linear Regression (GLR), Linear Regression, Polynomial Regression (quadratic in `MIN_YEARS_EXPERIENCE`), and Random Forest—and report test RMSE/MAE/R², along with coefficient/t-value summaries for interpretability. Artifacts are saved under `_output/`.
+## Abstract
+This assignment focuses on building and evaluating salary prediction models using Lightcast job-posting data. After enforcing filters (positive salaries; non-negative experience), categorical fields were encoded and assembled for modeling. Four regressors were trained—Generalized Linear Regression (GLR), Linear Regression, Polynomial Regression (quadratic in `MIN_YEARS_EXPERIENCE`), and Random Forest—and report test RMSE/MAE/R², in addition to coefficient/t-value summaries for interpretability. Data is saved under `_output/`.
 
 ```{python}
 # --- Setup ---
@@ -42,13 +42,13 @@ from math import erf, sqrt
 from pathlib import Path
 import os, sys, subprocess
 
-# Ensure required packages for image export
+# Required packages for image export
 subprocess.run([sys.executable, "-m", "pip", "install", "kaleido"], check=False)
 
 pio.renderers.default = "plotly_mimetype"
 sns.set_theme(style="whitegrid")
 
-# Start Spark (quiet logs)
+# Start Spark
 try:
     spark
 except NameError:
@@ -59,7 +59,7 @@ np.random.seed(42)
 OUTPUT_DIR = Path("_output")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-print("[OK] Environment initialized")
+# print("[OK] Environment initialized")
 ```
 
 ```{python}
@@ -111,10 +111,10 @@ df_clean = (
     .filter(F.col(min_years) >= 0)     # non-negative experience
 )
 
-print("[OK] Cleaned rows:", df_clean.count())
-print("[vars] y:", y_col)
-print("[vars] numeric:", cont_cols + [min_years])
-print("[vars] categorical:", cat_cols)
+# print("[OK] Cleaned rows:", df_clean.count())
+# print("[vars] y:", y_col)
+# print("[vars] numeric:", cont_cols + [min_years])
+# print("[vars] categorical:", cat_cols)
 ```
 
 ```{python}
@@ -177,7 +177,7 @@ print("[OK] Pruned final_df columns:", final_df.columns)
 train_df, test_df = final_df.randomSplit([0.8, 0.2], seed=42)
 print("[OK] Split sizes:", train_df.count(), test_df.count())
 ```
-> An 80/20 train–test split was used, this is a standard ratio for tabular regression data. It balances bias and variance by keeping sufficient training data while holding back a meaningful test sample for performance validation.
+> The standard ratio of 80/20 for tabular regression was used. This will balance bias and variances by keeping enough training data while still holding back a meaningful test sample for performance validation.
 
 
 ```{python}
